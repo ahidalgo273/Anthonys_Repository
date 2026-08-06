@@ -33,12 +33,15 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 
   webServer: {
-    command: "npm run build && npx next start -p 3210",
+    // Creates the test database first, so the suite works from a clean
+    // checkout with no manual setup.
+    command: "npx prisma migrate deploy && npm run build && npx next start -p 3210",
     url: "http://localhost:3210",
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
     env: {
       // A separate database file, so a test run never touches your real data.
+      // Prisma resolves this relative to prisma/, giving prisma/e2e.db.
       DATABASE_URL: "file:./e2e.db",
       EMAIL_DRIVER: "console",
     },
