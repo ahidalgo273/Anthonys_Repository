@@ -1,62 +1,93 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { site } from "@/config/site";
+import { isStateCode } from "@/config/states";
+import { logActivity } from "@/lib/activity";
+import { db } from "@/lib/db";
+import { sendEmail } from "@/lib/email";
 
 /**
  * Contact and suite-availability inquiries.
  *
- * Phase 1: validates and logs. Phase 2 replaces the logging with a saved Lead
- * record and an email through lib/email, so the shape of the payload here is
- * intentionally the same as the intake funnel's contact step.
+ * Saves a Lead so an inquiry lands in the same pipeline as an intake, and
+ * notifies the operator. A person who writes in and a person who completes the
+ * funnel are the same person from the business's point of view.
  */
 
-type InquiryPayload = {
-  name?: unknown;
-  email?: unknown;
-  phone?: unknown;
-  timing?: unknown;
-  message?: unknown;
-  topic?: unknown;
-};
-
-const MAX_MESSAGE_LENGTH = 4000;
+const inquirySchema = z.object({
+  name: z.string().trim().min(1, "Please enter your name.").max(200),
+  email: z
+    .string()
+    .trim()
+    .max(254)
+    .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Please enter a valid email address."),
+  phone: z.string().trim().max(40).optional().default(""),
+  timing: z.string().trim().max(60).optional().default(""),
+  state: z.string().trim().max(4).optional().default(""),
+  message: z.string().trim().max(4000).optional().default(""),
+  topic: z.enum(["suite", "general"]).optional().default("general"),
+});
 
 export async function POST(request: Request) {
-  let body: InquiryPayload;
+  let raw: unknown;
   try {
-    body = (await request.json()) as InquiryPayload;
+    raw = await request.json();
   } catch {
     return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 400 });
   }
 
-  const name = typeof body.name === "string" ? body.name.trim() : "";
-  const email = typeof body.email === "string" ? body.email.trim() : "";
-  const phone = typeof body.phone === "string" ? body.phone.trim() : "";
-  const timing = typeof body.timing === "string" ? body.timing.trim() : "";
-  const message = typeof body.message === "string" ? body.message.trim() : "";
-  const topic = body.topic === "suite" ? "suite" : "general";
-
-  if (!name || name.length > 200) {
-    return NextResponse.json({ ok: false, error: "Please enter your name." }, { status: 400 });
-  }
-  if (!isPlausibleEmail(email)) {
+  const parsed = inquirySchema.safeParse(raw);
+  if (!parsed.success) {
     return NextResponse.json(
-      { ok: false, error: "Please enter a valid email address." },
+      { ok: false, error: parsed.error.issues[0]?.message ?? "Please check your details." },
       { status: 400 },
     );
   }
-  if (message.length > MAX_MESSAGE_LENGTH) {
-    return NextResponse.json({ ok: false, error: "That message is too long." }, { status: 400 });
-  }
 
-  // Phase 2 swaps this for `saveLead()` + `sendEmail()`.
-  console.info("[inquiry]", { topic, name, email, phone, timing, message });
+  const { name, email, phone, timing, state, message, topic } = parsed.data;
+
+  const lead = await db.lead.create({
+    data: {
+      name,
+      email: email.toLowerCase(),
+      phone: phone || null,
+      stateCode: isStateCode(state) ? state.toUpperCase() : null,
+      timeline: timing || null,
+      goal: topic === "suite" ? "suite_only" : null,
+      source: topic === "suite" ? "suite_inquiry" : "contact_form",
+      status: "NEW",
+    },
+  });
+
+  await logActivity({
+    actorType: "client",
+    actorEmail: lead.email,
+    entityType: "lead",
+    entityId: lead.id,
+    action: topic === "suite" ? "suite_inquiry_received" : "contact_inquiry_received",
+  });
+
+  await sendEmail({
+    to: site.contact.adminEmail,
+    replyTo: email,
+    subject:
+      topic === "suite"
+        ? `Suite inquiry — ${name}${timing ? ` (${timing})` : ""}`
+        : `Contact form — ${name}`,
+    text: [
+      `Name:  ${name}`,
+      `Email: ${email}`,
+      `Phone: ${phone || "—"}`,
+      state ? `State: ${state}` : null,
+      timing ? `Timing: ${timing}` : null,
+      "",
+      message || "(no message)",
+      "",
+      `Admin: ${site.url}/admin/leads/${lead.id}`,
+    ]
+      .filter((line) => line !== null)
+      .join("\n"),
+  });
 
   return NextResponse.json({ ok: true });
-}
-
-/**
- * Deliberately permissive. Real addresses fail strict regexes far more often
- * than fake ones pass a loose one, and we confirm by replying anyway.
- */
-function isPlausibleEmail(value: string): boolean {
-  return value.length > 3 && value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
