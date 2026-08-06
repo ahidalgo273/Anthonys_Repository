@@ -1,0 +1,455 @@
+// DealerDesk database schema.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// NON-DEVELOPER NOTE
+// This describes every piece of information the app stores. SQLite keeps the
+// whole database in one file (prisma/dev.db) so there is nothing to install.
+//
+// Moving to Postgres later is two changes: set `provider = "postgresql"` below
+// and point DATABASE_URL at the new database. Nothing else in this file needs
+// to change — no Postgres-only features are used.
+//
+// NOTE ON PRIVACY: there is deliberately no field anywhere for a Social
+// Security number or driver's license number. Generated packets print a blank
+// line for the client to complete by hand. Do not add one.
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ── People and access ────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  CLIENT
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  phone     String?
+  role      Role     @default(CLIENT)
+  /// Stripe customer ID, set the first time they pay.
+  stripeCustomerId String? @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions      Session[]
+  leads         Lead[]
+  applications  Application[]
+  deadlines     Deadline[]
+  subscriptions Subscription[]
+  orders        Order[]
+  suites        Suite[]
+
+  @@index([role])
+}
+
+/// A single-use sign-in link. We store only a hash of the token, so a database
+/// leak cannot be used to sign in as anyone.
+model MagicLinkToken {
+  id        String    @id @default(cuid())
+  email     String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  /// Recorded for rate limiting, not for analytics.
+  requestIp String?
+
+  @@index([email, createdAt])
+  @@index([expiresAt])
+}
+
+/// A signed-in browser session. Also stored as a hash.
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ── Sales pipeline ───────────────────────────────────────────────────────────
+
+enum LeadStatus {
+  NEW
+  SCREENED
+  ATTORNEY_REFERRAL
+  CONVERTED
+  LOST
+}
+
+/// Someone who started an intake. Becomes a User once they pay.
+model Lead {
+  id        String     @id @default(cuid())
+  email     String
+  name      String?
+  phone     String?
+  /// "GA" | "FL" | "NC" — validated against config/states before saving.
+  stateCode String?
+  /// What they want the license for: auction access, retail, wholesale, suite.
+  goal      String?
+  timeline  String?
+  /// Where they came from, e.g. "organic", "referral", a UTM value.
+  source    String     @default("direct")
+  status    LeadStatus @default(NEW)
+
+  /// LEGAL GUARDRAIL: set when a criminal-history answer, a free-text legal
+  /// question, or a blocked AI request routes this person to an attorney.
+  /// Never evaluated by us — it exists only to trigger a referral.
+  attorneyReferral       Boolean   @default(false)
+  attorneyReferralReason String?
+  attorneyReferralAt     DateTime?
+
+  /// Raw screening answers and the engine's verdict, for the admin to review.
+  screeningAnswers Json?
+  screeningResult  Json?
+  /// Which package they selected in the funnel, before checkout.
+  selectedPackage  String?
+  /// The step they last completed, so a returning visitor can resume.
+  lastStep         String?
+  /// Whether they ticked the not-a-law-firm acknowledgment.
+  acknowledgedAt   DateTime?
+
+  userId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user           User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  applications   Application[]
+  orders         Order[]
+  notes          Note[]
+  tasks          Task[]
+  aiInteractions AiInteraction[]
+
+  @@index([status])
+  @@index([stateCode])
+  @@index([attorneyReferral])
+  @@index([createdAt])
+  @@index([email])
+}
+
+// ── Filings ──────────────────────────────────────────────────────────────────
+
+/// The stages shown on the client's status tracker, in order.
+enum ApplicationStage {
+  INTAKE
+  DOCUMENTS
+  PACKET_READY
+  CLIENT_FILED
+  INSPECTION
+  LICENSED
+}
+
+model Application {
+  id        String           @id @default(cuid())
+  userId    String
+  leadId    String?
+  stateCode String
+  stage     ApplicationStage @default(INTAKE)
+  /// Which package was purchased, from config/pricing.ts.
+  packageId String?
+
+  businessName String?
+
+  /// Everything the client filled in for their packet, keyed by the field IDs
+  /// in config/states/*.ts `packetFieldGroups`. Stored as one document because
+  /// the fields differ per state and change when the state changes its form.
+  packetData Json?
+
+  packetGeneratedAt DateTime?
+  filedAt           DateTime?
+  licensedAt        DateTime?
+  licenseNumber     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lead      Lead?      @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  documents Document[]
+  deadlines Deadline[]
+  tasks     Task[]
+  notes     Note[]
+
+  @@index([userId])
+  @@index([stage])
+  @@index([stateCode])
+}
+
+enum DocumentStatus {
+  UPLOADED
+  NEEDS_REVIEW
+  ACCEPTED
+  REJECTED
+}
+
+model Document {
+  id            String @id @default(cuid())
+  applicationId String
+  /// Matches a `DocumentRequirement.id` in config/states/*.ts.
+  requirementId String
+  label         String
+
+  filename   String
+  /// Opaque key handed to lib/storage — a relative path today, an object key
+  /// after a move to S3 or Vercel Blob.
+  storageKey String
+  mimeType   String
+  sizeBytes  Int
+
+  status DocumentStatus @default(UPLOADED)
+
+  /// Client-entered facts we can check deterministically, e.g. a bond amount
+  /// against the state minimum. We never parse these out of the file itself.
+  amountCents Int?
+  expiresAt   DateTime?
+
+  /// Findings from the completeness pass. Advisory only — a human decides.
+  checkResult Json?
+
+  reviewNote      String?
+  reviewedAt      DateTime?
+  reviewedByEmail String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([status])
+}
+
+// ── Compliance calendar ──────────────────────────────────────────────────────
+
+enum DeadlineKind {
+  LICENSE_RENEWAL
+  BOND_EXPIRY
+  INSURANCE_EXPIRY
+  OCCUPATION_TAX
+  OTHER
+}
+
+model Deadline {
+  id            String       @id @default(cuid())
+  userId        String
+  applicationId String?
+  kind          DeadlineKind
+  label         String
+  dueDate       DateTime
+  /// "computed" when the deadline calculator derived it from state rules,
+  /// "manual" when the admin or client set it directly.
+  source        String       @default("computed")
+  notes         String?
+  completedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application Application?  @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  reminders   ReminderLog[]
+
+  @@index([userId])
+  @@index([dueDate])
+  @@index([kind])
+}
+
+/// One row per reminder actually sent, so the daily job never sends twice.
+model ReminderLog {
+  id         String   @id @default(cuid())
+  deadlineId String
+  /// 90, 60, or 30.
+  offsetDays Int
+  sentAt     DateTime @default(now())
+  channel    String   @default("email")
+
+  deadline Deadline @relation(fields: [deadlineId], references: [id], onDelete: Cascade)
+
+  @@unique([deadlineId, offsetDays])
+  @@index([sentAt])
+}
+
+// ── Money ────────────────────────────────────────────────────────────────────
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String
+  stripeSubscriptionId String    @unique
+  /// A product id from config/pricing.ts, e.g. "compliance".
+  productId            String
+  /// Stripe's status verbatim: active, trialing, past_due, canceled, unpaid.
+  status               String
+  amountCents          Int
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Order {
+  id              String  @id @default(cuid())
+  userId          String?
+  leadId          String?
+  stripeSessionId String? @unique
+  /// A product id from config/pricing.ts.
+  productId       String
+  amountCents     Int
+  /// "pending" | "paid" | "refunded" | "demo"
+  status          String  @default("pending")
+  /// True when this went through the no-Stripe-configured demo path, so demo
+  /// revenue never contaminates real metrics.
+  isDemo          Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// Stripe delivers webhooks more than once. We record every event id we have
+/// already handled and skip repeats.
+model ProcessedWebhookEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now())
+}
+
+// ── Suites (PropCo) ──────────────────────────────────────────────────────────
+
+enum SuiteStatus {
+  VACANT
+  RESERVED
+  OCCUPIED
+}
+
+/// Lightweight suite tracking only. Full property-management accounting is
+/// deliberately out of scope — dedicated PM software handles that later.
+model Suite {
+  id               String      @id @default(cuid())
+  name             String      @unique
+  sqFt             Int
+  monthlyRentCents Int
+  status           SuiteStatus @default(VACANT)
+
+  tenantUserId String?
+  leaseStart   DateTime?
+  leaseEnd     DateTime?
+  notes        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant User? @relation(fields: [tenantUserId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+}
+
+// ── Operations ───────────────────────────────────────────────────────────────
+
+model Task {
+  id            String    @id @default(cuid())
+  leadId        String?
+  applicationId String?
+  title         String
+  detail        String?
+  dueDate       DateTime?
+  completedAt   DateTime?
+  /// "admin" for the operator's own to-dos, "client" for things the client
+  /// must do (these appear in the portal).
+  audience      String    @default("admin")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([completedAt])
+  @@index([dueDate])
+}
+
+model Note {
+  id            String   @id @default(cuid())
+  leadId        String?
+  applicationId String?
+  body          String
+  authorEmail   String
+  createdAt     DateTime @default(now())
+
+  lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+}
+
+/// An append-only record of what happened to a file and who did it.
+model ActivityLog {
+  id String @id @default(cuid())
+  /// "admin" | "client" | "system"
+  actorType  String
+  actorEmail String?
+  /// "lead" | "application" | "document" | "deadline" | "suite" | "user"
+  entityType String
+  entityId   String
+  action     String
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+/// Every AI request, including the ones the guardrail refused. This is the
+/// audit trail proving the legal guardrail works.
+model AiInteraction {
+  id     String  @id @default(cuid())
+  leadId String?
+  userId String?
+  /// "chat" | "document_check"
+  kind   String
+
+  userMessage String?
+  /// True when the guardrail refused to answer.
+  blocked     Boolean @default(false)
+  /// "pre_check" | "post_check" | null — which layer stopped it.
+  blockedBy   String?
+  blockReason String?
+  /// True when this request created an attorney referral.
+  triggeredReferral Boolean @default(false)
+  /// False when the request was served by the non-AI fallback path.
+  usedModel Boolean @default(true)
+  model     String?
+
+  createdAt DateTime @default(now())
+
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([blocked])
+}

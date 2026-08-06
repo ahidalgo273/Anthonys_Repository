@@ -1,0 +1,441 @@
+@import "tailwindcss";
+
+/*
+ * DealerDesk design tokens.
+ *
+ * The look is deliberately plain: a deep navy for trust, a single amber accent
+ * for calls to action, and generous whitespace. Colors are defined as CSS
+ * variables so light and dark mode share one set of component classes.
+ */
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+:root {
+  --bg: #ffffff;
+  --bg-subtle: #f6f7f9;
+  --bg-raised: #ffffff;
+  --border: #d9dee5;
+  --border-strong: #b6bfcc;
+  --text: #14202e;
+  --text-muted: #4d5c6e;
+  --brand: #12314f;
+  --brand-hover: #0c2237;
+  --brand-contrast: #ffffff;
+  --accent: #b45309;
+  --accent-soft: #fef3c7;
+  --success: #15653f;
+  --success-soft: #dcfce7;
+  --warning: #92400e;
+  --warning-soft: #fef3c7;
+  --danger: #9f1239;
+  --danger-soft: #ffe4e6;
+  --info: #1e40af;
+  --info-soft: #dbeafe;
+  --ring: #1d4ed8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d141d;
+    --bg-subtle: #131c27;
+    --bg-raised: #17222f;
+    --border: #2a3746;
+    --border-strong: #3d4d5f;
+    --text: #eef2f6;
+    --text-muted: #a3b1c2;
+    --brand: #cddff2;
+    --brand-hover: #e6effa;
+    --brand-contrast: #0d141d;
+    --accent: #fbbf24;
+    --accent-soft: #422006;
+    --success: #86efac;
+    --success-soft: #052e16;
+    --warning: #fcd34d;
+    --warning-soft: #422006;
+    --danger: #fda4af;
+    --danger-soft: #4c0519;
+    --info: #93c5fd;
+    --info-soft: #172554;
+    --ring: #93c5fd;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: var(--text);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  /* One visible focus style everywhere, for keyboard users. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+    color: var(--text);
+  }
+}
+
+@layer components {
+  .container-page {
+    width: 100%;
+    max-width: 72rem;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  .container-prose {
+    width: 100%;
+    max-width: 46rem;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  /* ── Buttons ─────────────────────────────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.7rem 1.15rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.2;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    text-align: center;
+  }
+
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background-color: var(--brand);
+    color: var(--brand-contrast);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--brand-hover);
+  }
+
+  .btn-secondary {
+    background-color: transparent;
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background-color: var(--bg-subtle);
+  }
+
+  .btn-ghost {
+    background-color: transparent;
+    color: var(--text-muted);
+    padding-inline: 0.6rem;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    color: var(--text);
+    background-color: var(--bg-subtle);
+  }
+
+  .btn-danger {
+    background-color: transparent;
+    color: var(--danger);
+    border-color: var(--danger);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background-color: var(--danger-soft);
+  }
+
+  /* ── Surfaces ────────────────────────────────────────────────────────── */
+  .card {
+    background-color: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+  }
+
+  .card-flush {
+    background-color: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+
+  /* ── Badges ──────────────────────────────────────────────────────────── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 999px;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+  .badge-neutral {
+    background-color: var(--bg-subtle);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  .badge-success {
+    background-color: var(--success-soft);
+    color: var(--success);
+  }
+  .badge-warning {
+    background-color: var(--warning-soft);
+    color: var(--warning);
+  }
+  .badge-danger {
+    background-color: var(--danger-soft);
+    color: var(--danger);
+  }
+  .badge-info {
+    background-color: var(--info-soft);
+    color: var(--info);
+  }
+
+  /* ── Callouts ────────────────────────────────────────────────────────── */
+  .callout {
+    border-radius: 0.6rem;
+    border-left-width: 4px;
+    border-left-style: solid;
+    padding: 1rem 1.15rem;
+    font-size: 0.95rem;
+  }
+  .callout-info {
+    background-color: var(--info-soft);
+    border-left-color: var(--info);
+    color: var(--text);
+  }
+  .callout-warning {
+    background-color: var(--warning-soft);
+    border-left-color: var(--warning);
+    color: var(--text);
+  }
+  .callout-danger {
+    background-color: var(--danger-soft);
+    border-left-color: var(--danger);
+    color: var(--text);
+  }
+  .callout-success {
+    background-color: var(--success-soft);
+    border-left-color: var(--success);
+    color: var(--text);
+  }
+
+  /* ── Forms ───────────────────────────────────────────────────────────── */
+  .label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.35rem;
+  }
+
+  .hint {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    margin-top: 0.3rem;
+  }
+
+  .input,
+  .select,
+  .textarea {
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-strong);
+    background-color: var(--bg-raised);
+    color: var(--text);
+    padding: 0.6rem 0.75rem;
+    font-size: 0.95rem;
+    font-family: inherit;
+  }
+
+  .input::placeholder,
+  .textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.75;
+  }
+
+  .textarea {
+    min-height: 6rem;
+    resize: vertical;
+  }
+
+  .field-error {
+    color: var(--danger);
+    font-size: 0.8125rem;
+    margin-top: 0.3rem;
+    font-weight: 500;
+  }
+
+  /* ── Tables ──────────────────────────────────────────────────────────── */
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    background-color: var(--bg-raised);
+  }
+
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.925rem;
+    min-width: 34rem;
+  }
+
+  .table caption {
+    text-align: left;
+    padding: 0.85rem 1rem;
+    font-weight: 600;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .table th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background-color: var(--bg-subtle);
+    white-space: nowrap;
+  }
+
+  .table td {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  .table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* ── Prose (blog + legal pages) ──────────────────────────────────────── */
+  .prose-page h2 {
+    font-size: 1.5rem;
+    margin-top: 2.25rem;
+    margin-bottom: 0.75rem;
+  }
+  .prose-page h3 {
+    font-size: 1.175rem;
+    margin-top: 1.75rem;
+    margin-bottom: 0.5rem;
+  }
+  .prose-page p {
+    margin-bottom: 1rem;
+    color: var(--text-muted);
+  }
+  .prose-page ul,
+  .prose-page ol {
+    margin-bottom: 1rem;
+    padding-left: 1.35rem;
+    color: var(--text-muted);
+  }
+  .prose-page ul {
+    list-style: disc;
+  }
+  .prose-page ol {
+    list-style: decimal;
+  }
+  .prose-page li {
+    margin-bottom: 0.4rem;
+  }
+  .prose-page a {
+    color: var(--info);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .prose-page strong {
+    color: var(--text);
+    font-weight: 650;
+  }
+  .prose-page blockquote {
+    border-left: 3px solid var(--border-strong);
+    padding-left: 1rem;
+    font-style: italic;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+  .prose-page code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    background-color: var(--bg-subtle);
+    padding: 0.1rem 0.35rem;
+    border-radius: 0.25rem;
+  }
+
+  /* Skip link — visible only when focused. */
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 100;
+    background: var(--brand);
+    color: var(--brand-contrast);
+    padding: 0.75rem 1rem;
+    border-radius: 0 0 0.5rem 0;
+    font-weight: 600;
+  }
+  .skip-link:focus {
+    left: 0;
+  }
+}
