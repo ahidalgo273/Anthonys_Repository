@@ -24,8 +24,10 @@ prisma/*.db-journal
 prisma/dev.db*
 
 # uploaded documents (local storage driver)
-storage/
-!storage/.gitkeep
+# Anchored with a leading slash: an unanchored `storage/` also matches
+# lib/storage/, which silently kept the storage source code out of the repo.
+/storage/
+!/storage/.gitkeep
 
 # generated packets
 tmp/
