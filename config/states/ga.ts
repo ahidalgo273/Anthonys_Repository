@@ -58,7 +58,7 @@ export const georgia: StateRules = {
   bond: {
     // CONTENT: verify against current state rules before launch — increased to
     // $50,000 as of July 2026.
-    amountCents: 5_000_000_00,
+    amountCents: 50_000 * 100,
     note: "Georgia requires a $50,000 surety bond as of July 2026. You do not pay $50,000 — you pay an annual premium to a bond company, often a few hundred dollars for applicants with good credit. We refer you to providers who work with new dealers.",
   },
 
@@ -158,7 +158,7 @@ export const georgia: StateRules = {
         "The executed bond certificate naming your entity exactly as it appears on your application.",
       required: true,
       source: "Surety bond provider (we refer you)",
-      checks: { minAmountCents: 5_000_000_00, mustNotBeExpired: true },
+      checks: { minAmountCents: 50_000 * 100, mustNotBeExpired: true },
     },
     {
       id: "garage_liability",

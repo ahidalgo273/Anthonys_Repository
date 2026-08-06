@@ -54,7 +54,7 @@ export const florida: StateRules = {
 
   bond: {
     // CONTENT: verify against current state rules before launch.
-    amountCents: 2_500_000_00,
+    amountCents: 25_000 * 100,
     note: "Florida requires a $25,000 surety bond. You pay an annual premium to a bond company, not the full amount. We refer you to providers who work with new dealers.",
   },
 
@@ -145,7 +145,7 @@ export const florida: StateRules = {
         "The executed bond certificate naming your entity exactly as it appears on your application.",
       required: true,
       source: "Surety bond provider (we refer you)",
-      checks: { minAmountCents: 2_500_000_00, mustNotBeExpired: true },
+      checks: { minAmountCents: 25_000 * 100, mustNotBeExpired: true },
     },
     {
       id: "garage_liability",

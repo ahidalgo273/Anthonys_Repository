@@ -1,7 +1,7 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import { site } from "@/config/site";
 import type { PacketDocument } from "./assemble";
-import { toPdfSafe, truncate, wrapText } from "./text";
+import { toPdfSafeLine, truncate, wrapText } from "./text";
 
 /**
  * Turning a packet model into a printable PDF.
@@ -54,7 +54,7 @@ class Layout {
       thickness: 0.5,
       color: RULE,
     });
-    this.page.drawText(toPdfSafe(this.footerText), {
+    this.page.drawText(toPdfSafeLine(this.footerText), {
       x: MARGIN,
       y: MARGIN + 6,
       size: 7,
@@ -180,7 +180,7 @@ class Layout {
       borderWidth: 1,
     });
 
-    this.page.drawText(toPdfSafe(title), {
+    this.page.drawText(toPdfSafeLine(title), {
       x: MARGIN + 12,
       y: this.y - 18,
       size: 10,

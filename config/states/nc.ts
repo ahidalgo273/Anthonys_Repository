@@ -56,7 +56,7 @@ export const northCarolina: StateRules = {
 
   bond: {
     // CONTENT: verify against current state rules before launch.
-    amountCents: 5_000_000_00,
+    amountCents: 50_000 * 100,
     note: "North Carolina requires a $50,000 surety bond. You pay an annual premium to a bond company, not the full amount. We refer you to providers who work with new dealers.",
   },
 
@@ -127,7 +127,7 @@ export const northCarolina: StateRules = {
         "The executed bond certificate naming your entity exactly as it appears on your application.",
       required: true,
       source: "Surety bond provider (we refer you)",
-      checks: { minAmountCents: 5_000_000_00, mustNotBeExpired: true },
+      checks: { minAmountCents: 50_000 * 100, mustNotBeExpired: true },
     },
     {
       id: "garage_liability",

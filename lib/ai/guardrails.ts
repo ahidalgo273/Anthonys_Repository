@@ -129,7 +129,10 @@ const UNSAFE_RESPONSE_PATTERNS: { pattern: RegExp; reason: string }[] = [
     reason: "Reply offered to sign or file on the client's behalf.",
   },
   {
-    pattern: /\b(you (do not|don'?t) (need to|have to) (disclose|report|mention)|just leave (it|that) (blank|off))\b/i,
+    // Covers "just leave that blank", "leave that question blank", "leave it
+    // off the form" — the phrasing varies more than the advice does.
+    pattern:
+      /\b((you )?(do not|don'?t) (need to|have to) (disclose|report|mention|answer)|(just )?leav(e|ing)\b[^.?!]{0,30}\b(blank|empty|off|out|unanswered)|no need to (disclose|report|mention))\b/i,
     reason: "Reply advised withholding information from a state agency.",
   },
 ];

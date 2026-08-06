@@ -44,3 +44,6 @@ yarn-debug.log*
 yarn-error.log*
 .vercel
 *.tsbuildinfo
+
+# e2e test database
+prisma/e2e.db*

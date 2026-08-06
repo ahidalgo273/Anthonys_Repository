@@ -43,8 +43,14 @@ export function toPdfSafe(input: string): string {
   let output = "";
   for (const character of text) {
     const code = character.codePointAt(0) ?? 0;
+    // Newlines survive: wrapText splits paragraphs on them, and turning them
+    // into "?" would collapse multi-line text into one run of gibberish.
+    // wrapText never passes a newline to drawText, so this is safe.
     const encodable =
-      (code >= 0x20 && code <= 0x7e) || (code >= 0xa0 && code <= 0xff) || WIN_ANSI_EXTRAS.has(code);
+      code === 0x0a ||
+      (code >= 0x20 && code <= 0x7e) ||
+      (code >= 0xa0 && code <= 0xff) ||
+      WIN_ANSI_EXTRAS.has(code);
     output += encodable ? character : "?";
   }
   return output;
@@ -108,9 +114,20 @@ export function wrapText(
   return lines.length > 0 ? lines : [""];
 }
 
+/**
+ * Sanitize for a context that draws exactly one line.
+ *
+ * `toPdfSafe` keeps newlines so `wrapText` can split paragraphs on them, but a
+ * newline handed straight to drawText produces broken output — so anything
+ * going directly to the page uses this instead.
+ */
+export function toPdfSafeLine(input: string): string {
+  return toPdfSafe(input).replace(/\n+/g, " ");
+}
+
 /** Shorten to fit one line, ending in an ellipsis. */
 export function truncate(input: string, font: PDFFont, size: number, maxWidth: number): string {
-  const safe = toPdfSafe(input);
+  const safe = toPdfSafeLine(input);
   if (font.widthOfTextAtSize(safe, size) <= maxWidth) return safe;
 
   let result = safe;
