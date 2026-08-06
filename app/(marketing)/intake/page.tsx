@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AssistantChat } from "@/components/intake/assistant-chat";
 import {
   ContactStep,
   GoalStep,
@@ -123,6 +124,17 @@ export default async function IntakePage({
           />
           <PackageStep action={startCheckout} lead={lead} />
         </>
+      )}
+
+      {/*
+        The assistant is available from the state step onward — by then we know
+        enough about what they are asking about for the answers to be useful,
+        and the contact step should stay a single focused form.
+      */}
+      {step !== "contact" && (
+        <div className="mt-10">
+          <AssistantChat />
+        </div>
       )}
     </WizardShell>
   );

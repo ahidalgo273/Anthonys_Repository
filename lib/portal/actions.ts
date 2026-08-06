@@ -6,7 +6,7 @@ import { getState } from "@/config/states";
 import { logActivity } from "@/lib/activity";
 import { requireUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
-import { checkDocument } from "@/lib/documents/checks";
+import { checkDocumentWithAi } from "@/lib/ai/document-check";
 import {
   ALLOWED_MIME_TYPES,
   MAX_UPLOAD_BYTES,
@@ -91,14 +91,17 @@ export async function uploadDocument(
   const bytes = Buffer.from(await file.arrayBuffer());
   await putObject(key, bytes, file.type);
 
-  // Deterministic completeness checks. These NEVER auto-approve — the result
-  // is advisory and the document always lands in review.
-  const checkResult = checkDocument({
+  // Completeness checks. Deterministic rules always run; an AI image review is
+  // added when a key is configured and the upload is a photo. NEITHER can
+  // approve anything — the result is advisory and the document always lands in
+  // review below.
+  const checkResult = await checkDocumentWithAi({
     requirement,
     amountCents,
     expiresAt,
     sizeBytes: file.size,
     mimeType: file.type,
+    fileData: bytes,
     today: new Date(),
   });
 
