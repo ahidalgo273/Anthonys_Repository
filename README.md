@@ -363,6 +363,8 @@ Choices made while building, and why.
 
 Work through this before taking a real customer's money.
 
+> **Not sure where to start?** [`docs/next-steps-prompts.md`](docs/next-steps-prompts.md) has ready-to-paste prompts that read the current state of the project and turn this list into an ordered plan — including which steps only you can do and which a Claude session can handle.
+
 ### Legal — do these first
 
 - [ ] **Have an attorney review all site copy**, especially `/legal/disclaimer`, `/legal/terms`, and `/legal/privacy`. The terms and privacy pages are drafts and say so on the page.
