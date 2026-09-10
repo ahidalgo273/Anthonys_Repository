@@ -15,3 +15,13 @@ Controls:
 
 - Say `stop adhd mode` or `normal mode` to turn it off for the current session.
 - Remove the `SessionStart` entry from `.claude/settings.json` to stop auto-loading; `/i-have-adhd` still works on demand.
+
+## Turn it on for every project on your computer
+
+Run once from this repo folder (macOS, Linux, or Git Bash on Windows):
+
+```sh
+sh install-adhd-global.sh
+```
+
+It copies the skill and hook into `~/.claude/` and merges a `SessionStart` hook into `~/.claude/settings.json`. Re-running is safe. To undo, delete the `i-have-adhd` entry from that file.
