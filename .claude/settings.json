@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/i-have-adhd-always-on.sh\"",
+            "timeout": 30,
+            "statusMessage": "Loading i-have-adhd rules..."
+          }
+        ]
+      }
+    ]
+  }
+}
