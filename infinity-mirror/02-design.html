@@ -1,0 +1,417 @@
+<title>Infinity Border Mirror Rev A</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a drawing package — title block, then numbered sheets, each a framed drawing with its notes beside or below. */
+:root {
+  --paper: #F2F4F3; --sheet: #FBFCFC; --ink: #17202A; --muted: #586472; --rule: #C7D0D7;
+  --line: #2B5E8E; --void: #0C0F16; --glass: #D6E6EC; --silver: #93A3AF; --panel: #E3E9EC;
+  --accent: #BF3786; --accent2: #1A9DB2; --warn: #9A5B00;
+  --f-display: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --f-body: "Barlow", "Segoe UI", Helvetica, Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0F151C; --sheet: #141C24; --ink: #E1E7ED; --muted: #94A1AE; --rule: #2B3743;
+  --line: #7FB3E2; --void: #04060A; --glass: #22384A; --silver: #6C7F8E; --panel: #1B252F;
+  --accent: #E762B2; --accent2: #43C8DC; --warn: #E0A64A; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #0F151C; --sheet: #141C24; --ink: #E1E7ED; --muted: #94A1AE; --rule: #2B3743;
+  --line: #7FB3E2; --void: #04060A; --glass: #22384A; --silver: #6C7F8E; --panel: #1B252F;
+  --accent: #E762B2; --accent2: #43C8DC; --warn: #E0A64A; color-scheme: dark }
+
+body { background: var(--paper); color: var(--ink); font: 400 16px/1.55 var(--f-body); }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.1; }
+h1 { font-size: clamp(30px, 5vw, 44px); font-weight: 700; letter-spacing: .01em; }
+h2 { font-size: 26px; font-weight: 600; }
+h3 { font-size: 19px; font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.label { font-family: var(--f-display); text-transform: uppercase; letter-spacing: .09em; font-size: 13px; font-weight: 600; color: var(--muted); }
+
+/* title block */
+.titleblock { display: grid; grid-template-columns: 2fr repeat(4, minmax(0, 1fr)); border: 1.5px solid var(--ink); background: var(--sheet); }
+.titleblock > div { padding: 10px 14px; border-left: 1px solid var(--rule); display: grid; gap: 2px; min-width: 0; }
+.titleblock > div:first-child { border-left: 0; gap: 6px; }
+.titleblock .v { font-family: var(--f-mono); font-size: 14px; }
+@media (max-width: 760px) { .titleblock { grid-template-columns: 1fr 1fr; }
+  .titleblock > div:first-child { grid-column: 1 / -1; }
+  .titleblock > div { border-left: 0; border-top: 1px solid var(--rule); } }
+
+.locked { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font-family: var(--f-mono); font-size: 13px; padding: 4px 10px; border: 1px solid var(--rule); border-radius: 3px; background: var(--sheet); }
+
+.sheet { background: var(--sheet); border: 1px solid var(--rule); display: grid; gap: 16px; padding: 20px; }
+.sheet-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; border-bottom: 1px solid var(--rule); padding-bottom: 10px; }
+.two { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 820px) { .two { grid-template-columns: 1fr; } }
+.draw { overflow-x: auto; }
+.draw svg { display: block; width: 100%; height: auto; min-width: 340px; }
+.notes { display: grid; gap: 10px; }
+.notes ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
+
+/* svg styling via tokens */
+.s-ink { stroke: var(--ink); fill: none; }
+.s-line { stroke: var(--line); fill: none; }
+.s-muted { stroke: var(--muted); fill: none; }
+.f-ink { fill: var(--ink); }
+.f-line { fill: var(--line); }
+.f-void { fill: var(--void); }
+.f-glass { fill: var(--glass); }
+.f-panel { fill: var(--panel); }
+.f-sheet { fill: var(--sheet); }
+.f-accent { fill: var(--accent); }
+.f-accent2 { fill: var(--accent2); }
+.t { font-family: var(--f-mono); font-size: 9px; fill: var(--ink); }
+.t-s { font-family: var(--f-mono); font-size: 7.5px; fill: var(--muted); }
+.t-d { font-family: var(--f-display); font-weight: 600; font-size: 11px; fill: var(--ink); letter-spacing: .04em; }
+.balloon circle { fill: var(--sheet); stroke: var(--line); stroke-width: 1; }
+.balloon text { font-family: var(--f-mono); font-size: 8px; fill: var(--line); text-anchor: middle; dominant-baseline: central; }
+
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+.tbl { overflow-x: auto; }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--rule); }
+th { font-family: var(--f-display); text-transform: uppercase; letter-spacing: .07em; font-size: 13px; color: var(--muted); font-weight: 600; }
+td:first-child { font-family: var(--f-mono); font-size: 13px; white-space: nowrap; color: var(--line); }
+.tag { font-family: var(--f-mono); font-size: 11.5px; padding: 1px 6px; border-radius: 3px; border: 1px solid currentColor; white-space: nowrap; }
+.tag.est { color: var(--warn); }
+.tag.dec { color: var(--accent); }
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; display: grid; gap: 6px; }
+</style>
+
+<div class="wrap">
+
+  <header class="titleblock">
+    <div>
+      <span class="label">Drawing package</span>
+      <h1>Infinity Border Mirror</h1>
+      <p>A 20 × 28 in wall mirror: clear center you can actually use, RGB infinity tunnel around the edge. Low-voltage plug-in, touch control, matte black.</p>
+    </div>
+    <div><span class="label">Rev</span><span class="v">A (concept)</span></div>
+    <div><span class="label">Date</span><span class="v">2026-11-02</span></div>
+    <div><span class="label">Units</span><span class="v">in / mm</span></div>
+    <div><span class="label">Status</span><span class="v">For factory quote</span></div>
+  </header>
+
+  <section class="locked" aria-label="Locked decisions">
+    <span class="chip">Buyer: gaming / aesthetic room</span>
+    <span class="chip">Size: 20 × 28 in</span>
+    <span class="chip">Finish: matte black, thin</span>
+    <span class="chip">Control: touch</span>
+    <span class="chip">Power: 12 V DC adapter</span>
+    <span class="chip">Retail target: $129–179</span>
+    <span class="chip">First order: 100–200 units</span>
+  </section>
+
+  <!-- SHEET 1 -->
+  <section class="sheet">
+    <div class="sheet-head"><h2>Sheet 1 · Front view</h2><span class="label">Scale 1:8 approx</span></div>
+    <div class="two">
+      <div class="draw">
+        <svg viewBox="0 0 360 400" role="img" aria-label="Front view of the mirror with dimensions">
+          <defs>
+            <linearGradient id="rgb" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#FF2E9A"/><stop offset=".35" stop-color="#7B4DFF"/>
+              <stop offset=".65" stop-color="#18C8E6"/><stop offset="1" stop-color="#FF2E9A"/>
+            </linearGradient>
+            <linearGradient id="mir" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" style="stop-color:var(--glass)"/><stop offset=".5" style="stop-color:var(--sheet)"/><stop offset="1" style="stop-color:var(--glass)"/>
+            </linearGradient>
+            <marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 z" class="f-ink"/></marker>
+          </defs>
+          <!-- frame + band -->
+          <rect x="80" y="50" width="200" height="280" class="f-ink"/>
+          <rect x="82.5" y="52.5" width="195" height="275" class="f-void"/>
+          <!-- infinity reflections: dotted rings receding inward -->
+          <rect x="85" y="55" width="190" height="270" fill="none" stroke="url(#rgb)" stroke-width="2.6" stroke-dasharray="0 5.2" stroke-linecap="round"/>
+          <rect x="87.6" y="57.6" width="184.8" height="264.8" fill="none" stroke="url(#rgb)" stroke-width="2" stroke-dasharray="0 4.6" stroke-linecap="round" opacity=".75"/>
+          <rect x="89.8" y="59.8" width="180.4" height="260.4" fill="none" stroke="url(#rgb)" stroke-width="1.5" stroke-dasharray="0 4" stroke-linecap="round" opacity=".5"/>
+          <rect x="91.6" y="61.6" width="176.8" height="256.8" fill="none" stroke="url(#rgb)" stroke-width="1.1" stroke-dasharray="0 3.4" stroke-linecap="round" opacity=".32"/>
+          <rect x="93.1" y="63.1" width="173.8" height="253.8" fill="none" stroke="url(#rgb)" stroke-width=".8" stroke-dasharray="0 2.8" stroke-linecap="round" opacity=".18"/>
+          <!-- center mirror -->
+          <rect x="97.5" y="67.5" width="165" height="245" style="fill:url(#mir)" class="s-muted" stroke-width=".6"/>
+          <text x="180" y="150" text-anchor="middle" class="t-d">CLEAR MIRROR</text>
+          <text x="180" y="163" text-anchor="middle" class="t">16.5 × 24.5 in</text>
+          <text x="180" y="174" text-anchor="middle" class="t-s">419 × 622 mm</text>
+          <!-- touch pad -->
+          <circle cx="180" cy="298" r="5" class="s-ink" stroke-width=".8"/>
+          <path d="M180 294.6 v3.2 M177.4 296 a3.3 3.3 0 1 0 5.2 0" class="s-ink" stroke-width=".8" stroke-linecap="round"/>
+          <text x="180" y="290" text-anchor="middle" class="t-s">touch pad (behind glass)</text>
+          <!-- section line A-A -->
+          <line x1="64" y1="215" x2="296" y2="215" class="s-line" stroke-width=".9" stroke-dasharray="10 3 2 3"/>
+          <path d="M64 215 v-10 M296 215 v-10" class="s-line" stroke-width="2"/>
+          <path d="M64 205 l-3 6 h6 z M296 205 l-3 6 h6 z" class="f-line" transform="translate(0,-4)"/>
+          <text x="58" y="203" class="t-d" style="fill:var(--line)">A</text>
+          <text x="299" y="203" class="t-d" style="fill:var(--line)">A</text>
+          <!-- overall width -->
+          <path d="M80 48 V22 M280 48 V22" class="s-muted" stroke-width=".5"/>
+          <line x1="80" y1="28" x2="280" y2="28" class="s-ink" stroke-width=".6" marker-start="url(#ar)" marker-end="url(#ar)"/>
+          <text x="180" y="23" text-anchor="middle" class="t">20.00 in · 508 mm</text>
+          <!-- overall height -->
+          <path d="M78 50 H44 M78 330 H44" class="s-muted" stroke-width=".5"/>
+          <line x1="50" y1="50" x2="50" y2="330" class="s-ink" stroke-width=".6" marker-start="url(#ar)" marker-end="url(#ar)"/>
+          <text transform="translate(44 190) rotate(-90)" text-anchor="middle" class="t">28.00 in · 711 mm</text>
+          <!-- band width -->
+          <path d="M80 332 V358 M97.5 314 V358" class="s-muted" stroke-width=".5"/>
+          <line x1="80" y1="352" x2="97.5" y2="352" class="s-ink" stroke-width=".6" marker-start="url(#ar)" marker-end="url(#ar)"/>
+          <text x="102" y="355" class="t">1.75 in = 0.25 frame + 1.50 band</text>
+          <!-- cord -->
+          <path d="M262 312 C262 330 300 330 310 372" class="s-ink" stroke-width="1.2" stroke-dasharray="3 2"/>
+          <text x="352" y="390" text-anchor="end" class="t-s">DC cord exits rear, bottom-right</text>
+        </svg>
+      </div>
+      <div class="notes">
+        <h3>What you are looking at</h3>
+        <ol>
+          <li>The <b>black frame lip</b> is 0.25 in wide. It is the only metal visible from the front.</li>
+          <li>The <b>infinity band</b> is 1.50 in wide on all four sides. LEDs on the outer wall reflect back and forth, so the dots look like they recede into a tunnel.</li>
+          <li>The <b>clear mirror</b> is 16.5 × 24.5 in, large enough to see your head and torso at arm's length.</li>
+          <li>The <b>touch pad</b> sits behind the glass at bottom center: tap to change effect, hold to dim, double-tap for off.</li>
+          <li>The <b>cord</b> leaves from the back so nothing shows on the wall except the power cord dropping to the outlet.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- SHEET 2 -->
+  <section class="sheet">
+    <div class="sheet-head"><h2>Sheet 2 · Section A–A through the left edge</h2><span class="label">Scale 4:1 · mm</span></div>
+    <div class="draw">
+      <svg viewBox="0 0 480 280" role="img" aria-label="Cross-section showing glass, LED cavity, mirrors and backer layers">
+        <defs>
+          <pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="5" height="5" style="fill:var(--panel)"/><line x1="2.5" y1="0" x2="2.5" y2="5" style="stroke:var(--muted)" stroke-width="1"/>
+          </pattern>
+          <pattern id="foam" width="5" height="5" patternUnits="userSpaceOnUse">
+            <rect width="5" height="5" style="fill:var(--panel)"/><circle cx="2.5" cy="2.5" r=".8" style="fill:var(--muted)"/>
+          </pattern>
+          <linearGradient id="rgb2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#FF2E9A"/><stop offset=".5" stop-color="#7B4DFF"/><stop offset="1" stop-color="#18C8E6"/>
+          </linearGradient>
+          <marker id="ar2" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 z" class="f-ink"/></marker>
+          <marker id="ar3" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L8 4 L0 8 z" class="f-accent"/></marker>
+        </defs>
+        <!-- cavity background -->
+        <rect x="46" y="118" width="168" height="80" class="f-void"/>
+        <!-- backer -->
+        <rect x="46" y="94" width="314" height="12" style="fill:url(#hatch)" class="s-ink" stroke-width=".6"/>
+        <!-- rear mirror -->
+        <rect x="46" y="106" width="168" height="12" class="f-glass s-ink" stroke-width=".5"/>
+        <line x1="46" y1="117.5" x2="214" y2="117.5" style="stroke:var(--silver)" stroke-width="2"/>
+        <!-- divider -->
+        <rect x="214" y="106" width="4.8" height="92" style="fill:url(#hatch)" class="s-ink" stroke-width=".5"/>
+        <!-- center bay -->
+        <rect x="218.8" y="106" width="141.2" height="77" class="f-sheet"/>
+        <!-- foam -->
+        <rect x="218.8" y="183" width="141.2" height="12" style="fill:url(#foam)" class="s-ink" stroke-width=".4"/>
+        <!-- black coating -->
+        <rect x="218.8" y="195" width="141.2" height="3" class="f-void"/>
+        <!-- front glass -->
+        <rect x="46" y="198" width="314" height="16" class="f-glass s-ink" stroke-width=".6"/>
+        <line x1="65.4" y1="198.6" x2="214" y2="198.6" class="s-line" stroke-width="1.2" stroke-dasharray="2 1.5"/>
+        <!-- frame -->
+        <path d="M40 88 H60 V94 H46 V214 H65.4 V220 H40 Z" style="fill:url(#hatch)" class="s-ink" stroke-width=".8"/>
+        <!-- LED strip -->
+        <rect x="46" y="140" width="7" height="36" class="f-accent2"/>
+        <rect x="53" y="150" width="5" height="16" fill="url(#rgb2)"/>
+        <!-- reflection ray -->
+        <polyline points="60,158 92,198 132,118 172,198 210,124" fill="none" style="stroke:var(--accent)" stroke-width="1" stroke-dasharray="3 2" opacity=".9"/>
+        <line x1="92" y1="200" x2="92" y2="236" style="stroke:var(--accent)" stroke-width="1" marker-end="url(#ar3)" opacity=".8"/>
+        <line x1="172" y1="200" x2="172" y2="236" style="stroke:var(--accent)" stroke-width="1" marker-end="url(#ar3)" opacity=".55"/>
+        <!-- PCB + wire -->
+        <rect x="268" y="106" width="64" height="5" class="f-accent2"/>
+        <rect x="278" y="111" width="10" height="6" class="f-ink"/><rect x="296" y="111" width="6" height="4" class="f-ink"/><rect x="310" y="111" width="12" height="7" class="f-ink"/>
+        <path d="M268 109 C240 109 236 150 218 170 C190 176 90 176 56 172" fill="none" class="s-ink" stroke-width=".8" stroke-dasharray="2.5 1.5"/>
+        <!-- cleat -->
+        <rect x="262" y="80" width="98" height="14" style="fill:url(#hatch)" class="s-ink" stroke-width=".6"/>
+        <!-- break line -->
+        <path d="M360 72 L360 130 L354 138 L366 146 L360 154 L360 226" class="s-muted" stroke-width=".8" fill="none"/>
+        <!-- band dimension -->
+        <path d="M65.4 222 V244 M217.8 200 V244" class="s-muted" stroke-width=".5"/>
+        <line x1="65.4" y1="238" x2="217.8" y2="238" class="s-ink" stroke-width=".6" marker-start="url(#ar2)" marker-end="url(#ar2)"/>
+        <text x="141.6" y="252" text-anchor="middle" class="t">38 mm (1.50 in) infinity band</text>
+        <!-- depth dimension -->
+        <path d="M62 88 H436 M366 220 H436" class="s-muted" stroke-width=".4" stroke-dasharray="1.5 2"/>
+        <line x1="430" y1="88" x2="430" y2="220" class="s-ink" stroke-width=".6" marker-start="url(#ar2)" marker-end="url(#ar2)"/>
+        <text transform="translate(446 154) rotate(-90)" text-anchor="middle" class="t">33 mm (1.3 in) frame depth</text>
+        <!-- viewer -->
+        <text x="40" y="272" class="t-s">▼ viewer side (front of mirror)</text>
+        <text x="300" y="272" class="t-s">wall side is up</text>
+        <!-- leaders -->
+        <g class="s-line" stroke-width=".5">
+          <path d="M26 100 H42"/><path d="M26 158 H47"/><path d="M130 68 V108"/><path d="M200 68 L216 110"/>
+          <path d="M300 140 V117"/><path d="M386 84 H361"/><path d="M386 100 H361"/><path d="M386 189 H361"/>
+          <path d="M330 248 V212"/><path d="M262 248 V197"/>
+        </g>
+        <g class="balloon">
+          <circle cx="18" cy="100" r="8"/><text x="18" y="100">1</text>
+          <circle cx="330" cy="256" r="8"/><text x="330" y="256">2</text>
+          <circle cx="262" cy="256" r="8"/><text x="262" y="256">3</text>
+          <circle cx="18" cy="158" r="8"/><text x="18" y="158">4</text>
+          <circle cx="150" cy="160" r="8"/><text x="150" y="160">5</text>
+          <circle cx="130" cy="60" r="8"/><text x="130" y="60">6</text>
+          <circle cx="200" cy="60" r="8"/><text x="200" y="60">7</text>
+          <circle cx="394" cy="189" r="8"/><text x="394" y="189">8</text>
+          <circle cx="300" cy="148" r="8"/><text x="300" y="148">9</text>
+          <circle cx="394" cy="100" r="8"/><text x="394" y="100">10</text>
+          <circle cx="394" cy="84" r="8"/><text x="394" y="84">11</text>
+        </g>
+      </svg>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Item</th><th>Part</th><th>Spec</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Frame</td><td>Extruded aluminum, matte black anodized, 6.35 mm face lip, 33 mm deep, mitered corners</td><td>Rigid, acts as LED heat sink, standard factory profile</td></tr>
+          <tr><td>2</td><td>Front glass</td><td>4 mm two-way mirror glass, one piece 508 × 711 mm, coating on rear face, light transmission 20–30%</td><td>One sheet means no seams between the mirror and the border</td></tr>
+          <tr><td>3</td><td>Black backing</td><td>Opaque black paint on rear of center area only</td><td>Black behind two-way glass makes the center read as a normal mirror</td></tr>
+          <tr><td>4</td><td>LED strip</td><td>12 V addressable RGB (WS2815 class), 60 LED/m, ~2.4 m, mounted on frame inner wall</td><td>Addressable allows chase and rainbow effects that sell the gaming look</td></tr>
+          <tr><td>5</td><td>Infinity cavity</td><td>20 mm air gap</td><td>Reflections repeat every ~40 mm, which gives a deep tunnel in a 33 mm frame</td></tr>
+          <tr><td>6</td><td>Rear mirror strips</td><td>3 mm silver mirror glass, or 2 mm mirror acrylic</td><td>Acrylic saves ~0.4 kg and cannot shatter; ask for both prices</td></tr>
+          <tr><td>7</td><td>Divider wall</td><td>1.2 mm black aluminum, full perimeter, grommet for LED wire</td><td>Keeps LED light out of the center mirror</td></tr>
+          <tr><td>8</td><td>Foam pad</td><td>3 mm EPE foam</td><td>Supports the glass so it does not flex when pressed or wiped</td></tr>
+          <tr><td>9</td><td>Controller PCB</td><td>See Sheet 3</td><td>Mounted to the backer, reachable by removing the backer</td></tr>
+          <tr><td>10</td><td>Backer panel</td><td>3 mm aluminum composite panel, full size, screwed to frame</td><td>Flat, light, does not warp in humidity like MDF</td></tr>
+          <tr><td>11</td><td>French cleat</td><td>Aluminum Z-clip pair with wall rail and anchors, rated 25 kg</td><td>One-person install, mirror hangs level</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <span class="label">Trade-off to know</span>
+      <p>Two-way glass reflects less light than a standard silver mirror, roughly 60–70% versus 90% or more. The center will look slightly darker than a bathroom mirror. Option B avoids this: a silver center mirror plus four separate two-way border strips, with visible seams. Ask the factory to quote both, then compare samples side by side.</p>
+    </div>
+  </section>
+
+  <!-- SHEET 3 -->
+  <section class="sheet">
+    <div class="sheet-head"><h2>Sheet 3 · Electrical schematic (block level)</h2><span class="label">All mirror-side wiring is 12 V DC</span></div>
+    <div class="draw">
+      <svg viewBox="0 0 640 270" role="img" aria-label="Power and control block diagram">
+        <defs>
+          <marker id="ar4" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L8 4 L0 8 z" class="f-ink"/></marker>
+        </defs>
+        <style>
+          .bx { fill: var(--sheet); stroke: var(--ink); stroke-width: 1; }
+          .bx2 { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; }
+          .w { stroke: var(--ink); stroke-width: 1; fill: none; }
+        </style>
+        <!-- row 1 -->
+        <rect x="10" y="30" width="110" height="52" rx="2" class="bx"/>
+        <text x="65" y="51" text-anchor="middle" class="t-d">WALL OUTLET</text><text x="65" y="66" text-anchor="middle" class="t">120 V AC</text>
+        <rect x="135" y="30" width="110" height="52" rx="2" class="bx2"/>
+        <text x="190" y="47" text-anchor="middle" class="t-d">WALL ADAPTER</text><text x="190" y="61" text-anchor="middle" class="t">12 V · 3 A · 36 W</text><text x="190" y="73" text-anchor="middle" class="t-s">UL/ETL listed, Class 2</text>
+        <rect x="260" y="30" width="110" height="52" rx="2" class="bx"/>
+        <text x="315" y="51" text-anchor="middle" class="t-d">DC CORD</text><text x="315" y="66" text-anchor="middle" class="t">1.8 m, 18 AWG</text>
+        <rect x="385" y="30" width="110" height="52" rx="2" class="bx"/>
+        <text x="440" y="51" text-anchor="middle" class="t-d">DC JACK</text><text x="440" y="66" text-anchor="middle" class="t">5.5 × 2.1 mm</text>
+        <rect x="510" y="30" width="120" height="52" rx="2" class="bx"/>
+        <text x="570" y="47" text-anchor="middle" class="t-d">PROTECTION</text><text x="570" y="61" text-anchor="middle" class="t">3 A polyfuse</text><text x="570" y="73" text-anchor="middle" class="t-s">+ polarity FET + TVS</text>
+        <g class="w" marker-end="url(#ar4)"><path d="M120 56 H133"/><path d="M245 56 H258"/><path d="M370 56 H383"/><path d="M495 56 H508"/></g>
+        <!-- mains boundary -->
+        <line x1="252.5" y1="14" x2="252.5" y2="100" style="stroke:var(--accent)" stroke-width="1.2" stroke-dasharray="4 3"/>
+        <text x="246" y="20" text-anchor="end" class="t-s">mains voltage stays here</text>
+        <text x="259" y="20" class="t-s">safe low voltage only →</text>
+        <!-- 12V rail -->
+        <path d="M570 82 V112" class="w"/>
+        <line x1="415" y1="112" x2="570" y2="112" style="stroke:var(--line)" stroke-width="2"/>
+        <text x="492" y="106" text-anchor="middle" class="t">12 V DC rail</text>
+        <path d="M415 112 V138" class="w" marker-end="url(#ar4)"/>
+        <path d="M570 112 V138" class="w" marker-end="url(#ar4)"/>
+        <!-- row 2 -->
+        <rect x="10" y="140" width="120" height="56" rx="2" class="bx"/>
+        <text x="70" y="160" text-anchor="middle" class="t-d">TOUCH SENSOR</text><text x="70" y="174" text-anchor="middle" class="t">TTP223-class IC</text><text x="70" y="186" text-anchor="middle" class="t-s">copper pad behind glass</text>
+        <rect x="190" y="140" width="120" height="56" rx="2" class="bx2"/>
+        <text x="250" y="160" text-anchor="middle" class="t-d">MICROCONTROLLER</text><text x="250" y="174" text-anchor="middle" class="t">runs LED effects</text><text x="250" y="186" text-anchor="middle" class="t-s">caps brightness at 50%</text>
+        <rect x="360" y="140" width="110" height="56" rx="2" class="bx"/>
+        <text x="415" y="160" text-anchor="middle" class="t-d">BUCK REGULATOR</text><text x="415" y="174" text-anchor="middle" class="t">12 V → 3.3 V</text>
+        <rect x="510" y="140" width="120" height="56" rx="2" class="bx"/>
+        <text x="570" y="158" text-anchor="middle" class="t-d">LED STRIP</text><text x="570" y="172" text-anchor="middle" class="t">12 V addressable RGB</text><text x="570" y="186" text-anchor="middle" class="t-s">≈144 LEDs, 2.4 m</text>
+        <g class="w" marker-end="url(#ar4)">
+          <path d="M130 168 H188"/>
+          <path d="M360 168 H312"/>
+        </g>
+        <text x="336" y="162" text-anchor="middle" class="t-s">3.3 V</text>
+        <text x="159" y="162" text-anchor="middle" class="t-s">tap / hold</text>
+        <path d="M250 196 V232 H570 V198" class="w" marker-end="url(#ar4)"/>
+        <text x="410" y="246" text-anchor="middle" class="t-s">data line through 330 Ω resistor</text>
+        <!-- optional IR -->
+        <rect x="10" y="214" width="120" height="40" rx="2" fill="none" style="stroke:var(--muted)" stroke-dasharray="4 3"/>
+        <text x="70" y="231" text-anchor="middle" class="t">IR receiver</text><text x="70" y="244" text-anchor="middle" class="t-s">footprint only, not fitted</text>
+        <path d="M130 234 C165 234 190 222 208 198" fill="none" style="stroke:var(--muted)" stroke-dasharray="3 2" marker-end="url(#ar4)"/>
+      </svg>
+    </div>
+    <div class="two">
+      <div class="notes">
+        <h3>Why it is designed this way</h3>
+        <ol>
+          <li><b>No mains voltage inside the mirror.</b> The adapter is the only part that touches 120 V. Buy one that is already UL or ETL listed so you are not paying to certify a power supply.</li>
+          <li><b>The adapter can carry the full load.</b> Worst case, all 144 LEDs on full white draw about 30–36 W. The firmware caps brightness at about 50%, roughly 18 W, so the adapter runs cool and a firmware bug still cannot overload it.</li>
+          <li><b>Fuse, polarity and surge protection</b> at the jack protect against a wrong third-party adapter, which is the most common field failure for plug-in LED decor.</li>
+          <li><b>IR remote footprint.</b> It costs nothing to add to the board now. If reviews ask for a remote, fit the part and ship a $1 remote without redesigning anything.</li>
+        </ol>
+      </div>
+      <div class="notes">
+        <h3>Touch behavior</h3>
+        <div class="tbl"><table>
+          <thead><tr><th>Input</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td>Tap</td><td>Next effect: static color, rainbow chase, breathing, color cycle, tunnel pulse</td></tr>
+            <tr><td>Hold</td><td>Dim up or down, 5 steps</td></tr>
+            <tr><td>Double tap</td><td>LEDs off; the mirror stays usable</td></tr>
+            <tr><td>Power cut</td><td>Remembers last effect and brightness</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SHEET 4 -->
+  <section class="sheet">
+    <div class="sheet-head"><h2>Sheet 4 · Factory quote spec (RFQ)</h2><span class="label">Send this to 3–5 suppliers</span></div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Line</th><th>Requirement</th><th>Ask the factory</th></tr></thead>
+        <tbody>
+          <tr><td>R1 Size</td><td>508 × 711 mm, tolerance ±1 mm, 33 mm deep</td><td>Do you have an existing frame profile close to this?</td></tr>
+          <tr><td>R2 Glass</td><td>Option A one-piece two-way glass. Option B silver center plus two-way border strips</td><td>Quote both options; send photos of an infinity sample</td></tr>
+          <tr><td>R3 Safety</td><td>Anti-shatter safety film on the rear of all glass</td><td>Film brand and thickness</td></tr>
+          <tr><td>R4 LEDs</td><td>12 V addressable RGB, 60/m, factory-programmed effects per Sheet 3</td><td>LED chip brand; can you load custom effects?</td></tr>
+          <tr><td>R5 Power</td><td>12 V 3 A adapter with UL or ETL listing, US plug</td><td>Send the adapter's listing certificate and file number</td></tr>
+          <tr><td>R6 Compliance</td><td>FCC Part 15B test report for the controller; RoHS</td><td>Existing reports for this controller? Have you passed UL 962 on any mirror?</td></tr>
+          <tr><td>R7 Mount</td><td>French cleat kit plus wall anchors in box</td><td>Load rating</td></tr>
+          <tr><td>R8 Packaging</td><td>Ships in its own double-wall carton, foam corners, foam face sheet, Amazon-ready labels</td><td>Have you passed an ISTA 6-Amazon drop test? Packed size and weight</td></tr>
+          <tr><td>R9 Branding</td><td>Logo on carton and manual; no logo on the mirror face</td><td>Cost of a custom printed box at 100 and 200 units</td></tr>
+          <tr><td>R10 Order</td><td>Samples: 2 of each option. Then 100–200 units</td><td>Sample cost, unit price at 100 / 200 / 500, lead time, FOB port</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="two">
+      <div class="notes">
+        <h3>Estimated physical numbers</h3>
+        <div class="tbl"><table>
+          <thead><tr><th>Item</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>Product weight</td><td>≈ 7 kg (15 lb) <span class="tag est">estimate</span></td></tr>
+            <tr><td>Carton</td><td>≈ 24 × 32 × 4 in <span class="tag est">estimate</span></td></tr>
+            <tr><td>Shipping weight</td><td>≈ 22 lb actual and dimensional <span class="tag est">estimate</span></td></tr>
+            <tr><td>Amazon size tier</td><td>Bulky (longest side over 18 in)</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="notes">
+        <h3>Still open</h3>
+        <ol>
+          <li>Center Option A or B <span class="tag dec">decide after samples</span></li>
+          <li>Rear strips in glass or mirror acrylic <span class="tag dec">decide on price</span></li>
+          <li>Ship a $1 IR remote at launch <span class="tag dec">decide on cost</span></li>
+          <li>Freedom-to-operate check against design patent D1024833 <span class="tag dec">before ordering</span></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+</div>
