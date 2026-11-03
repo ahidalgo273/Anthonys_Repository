@@ -1,0 +1,333 @@
+<title>Mirror Cost Model</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: inputs on the left grouped like a costing worksheet; results pinned on the right; scenario grid and sources below. */
+:root {
+  --paper: #F2F4F3; --sheet: #FBFCFC; --ink: #17202A; --muted: #586472; --rule: #C7D0D7;
+  --line: #2B5E8E; --panel: #E6ECEF; --accent: #BF3786;
+  --good: #1D7A4A; --good-bg: #DDF0E5; --warn: #8A5A00; --warn-bg: #F6EBD3; --bad: #B0302B; --bad-bg: #F6DEDC;
+  --c1: #2B5E8E; --c2: #6F8FB0; --c3: #A9BCD0; --c4: #BF3786; --c5: #D98AB8; --c6: #8A5A00; --c7: #C9A45C; --c8: #1D7A4A;
+  --f-display: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --f-body: "Barlow", "Segoe UI", Helvetica, Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0F151C; --sheet: #141C24; --ink: #E1E7ED; --muted: #94A1AE; --rule: #2B3743;
+  --line: #7FB3E2; --panel: #1B252F; --accent: #E762B2;
+  --good: #5FD08F; --good-bg: #133222; --warn: #E8B45A; --warn-bg: #352812; --bad: #F07A72; --bad-bg: #3A1716;
+  --c1: #7FB3E2; --c2: #5B7FA3; --c3: #3E5873; --c4: #E762B2; --c5: #9C4A7C; --c6: #E8B45A; --c7: #9C7A35; --c8: #5FD08F;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #0F151C; --sheet: #141C24; --ink: #E1E7ED; --muted: #94A1AE; --rule: #2B3743;
+  --line: #7FB3E2; --panel: #1B252F; --accent: #E762B2;
+  --good: #5FD08F; --good-bg: #133222; --warn: #E8B45A; --warn-bg: #352812; --bad: #F07A72; --bad-bg: #3A1716;
+  --c1: #7FB3E2; --c2: #5B7FA3; --c3: #3E5873; --c4: #E762B2; --c5: #9C4A7C; --c6: #E8B45A; --c7: #9C7A35; --c8: #5FD08F;
+  color-scheme: dark }
+
+body { background: var(--paper); color: var(--ink); font: 400 15.5px/1.5 var(--f-body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 26px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 24px; }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; line-height: 1.1; text-wrap: balance; }
+h1 { font-size: clamp(30px, 5vw, 42px); font-weight: 700; }
+h2 { font-size: 23px; font-weight: 600; }
+h3 { font-size: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+p { margin: 0; max-width: 70ch; }
+.mono, .num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.label { font-family: var(--f-display); text-transform: uppercase; letter-spacing: .09em; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+header { display: grid; gap: 8px; border-bottom: 1.5px solid var(--ink); padding-bottom: 14px; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 24px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+.inputs { display: grid; gap: 16px; }
+fieldset { border: 1px solid var(--rule); background: var(--sheet); margin: 0; padding: 14px 16px 16px; display: grid; gap: 10px; min-width: 0; }
+legend { font-family: var(--f-display); font-weight: 600; font-size: 17px; padding: 0 6px; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) 138px; gap: 4px 12px; align-items: center; }
+.row label { font-weight: 500; }
+.row .src { grid-column: 1 / -1; font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.field { display: flex; align-items: center; border: 1px solid var(--rule); background: var(--paper); border-radius: 3px; }
+.field span { font-family: var(--f-mono); font-size: 13px; color: var(--muted); padding: 0 6px; }
+.field input, .field select { width: 100%; min-width: 0; border: 0; background: transparent; color: var(--ink); font: 500 14px var(--f-mono); padding: 7px 6px; text-align: right; }
+.field select { text-align: left; }
+.field:focus-within { outline: 2px solid var(--line); outline-offset: 1px; }
+
+.results { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); display: grid; gap: 16px; }
+@media (max-width: 900px) { .results { position: static; } }
+.card { background: var(--sheet); border: 1px solid var(--rule); padding: 16px; display: grid; gap: 12px; }
+.verdict { border-width: 1.5px; }
+.verdict.good { border-color: var(--good); background: var(--good-bg); }
+.verdict.warn { border-color: var(--warn); background: var(--warn-bg); }
+.verdict.bad { border-color: var(--bad); background: var(--bad-bg); }
+.pill { display: inline-block; font-family: var(--f-mono); font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 99px; border: 1px solid currentColor; }
+.pill.good { color: var(--good); } .pill.warn { color: var(--warn); } .pill.bad { color: var(--bad); }
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 480px) { .kpis { grid-template-columns: 1fr 1fr; } }
+.kpi { display: grid; gap: 2px; min-width: 0; }
+.kpi .v { font-family: var(--f-mono); font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.kpi .s { font-size: 12.5px; color: var(--muted); }
+.neg { color: var(--bad); } .pos { color: var(--good); }
+
+.bar { display: flex; height: 26px; border-radius: 3px; overflow: hidden; border: 1px solid var(--rule); }
+.bar div { height: 100%; min-width: 0; }
+.legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 14px; font-size: 13px; }
+.legend div { display: flex; justify-content: space-between; gap: 8px; }
+.legend i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 2px; vertical-align: -1px; }
+
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.tbl { overflow-x: auto; }
+th, td { padding: 7px 9px; border-bottom: 1px solid var(--rule); text-align: right; font-variant-numeric: tabular-nums; }
+th { font-family: var(--f-display); text-transform: uppercase; letter-spacing: .07em; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+th:first-child, td:first-child { text-align: left; }
+td.mono { font-family: var(--f-mono); }
+.grid td.cell { font-family: var(--f-mono); font-weight: 500; }
+.grid td.cell.good { background: var(--good-bg); color: var(--good); }
+.grid td.cell.warn { background: var(--warn-bg); color: var(--warn); }
+.grid td.cell.bad { background: var(--bad-bg); color: var(--bad); }
+.grid td.cell.cur { outline: 2px solid var(--ink); outline-offset: -2px; }
+.sources { display: grid; gap: 8px; font-size: 14px; }
+.sources ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+a { color: var(--line); }
+button { font: 600 14px var(--f-body); color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 3px; padding: 7px 12px; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--line); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="label">Infinity Border Mirror · Rev B · Phase 4</span>
+    <h1>Mirror Cost Model</h1>
+    <p>Change any number on the left. Every result updates at once. Defaults are researched figures or labeled estimates; replace them with factory and freight quotes as they arrive.</p>
+  </header>
+
+  <div class="layout">
+    <form class="inputs" id="f" autocomplete="off">
+      <fieldset>
+        <legend>Product and order</legend>
+        <div class="row"><label for="price">Retail price</label><div class="field"><span>$</span><input id="price" type="number" step="1" value="179"></div>
+          <div class="src">RGB infinity decor sells for $129–249. Rev B is larger than most competitors.</div></div>
+        <div class="row"><label for="fob">Factory price per unit (FOB)</label><div class="field"><span>$</span><input id="fob" type="number" step="1" value="60"></div>
+          <div class="src">Estimate. Ordinary LED mirrors quote $40–90; infinity layer and addressable LEDs add cost.</div></div>
+        <div class="row"><label for="units">Units in first order</label><div class="field"><input id="units" type="number" step="10" value="100"></div>
+          <div class="src">Factory minimums for LED mirrors are 1–100 units.</div></div>
+        <div class="row"><label for="monthly">Expected sales per month</label><div class="field"><input id="monthly" type="number" step="5" value="30"></div>
+          <div class="src">Your guess until real sales data exists.</div></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Import duty and freight</legend>
+        <div class="row"><label for="origin">Made in</label><div class="field"><select id="origin">
+            <option value="44">China · 44%</option><option value="19">Vietnam · 19%</option><option value="custom">Custom rate</option></select></div>
+          <div class="src">China: 6.5% base + 25% Section 301 + 12.5% forced-labor duty. Vietnam: 6.5% base + 12.5%.</div></div>
+        <div class="row"><label for="duty">Duty rate</label><div class="field"><input id="duty" type="number" step="0.5" value="44"><span>%</span></div>
+          <div class="src">Charged on the factory price. Pick "Custom rate" above to type your own.</div></div>
+        <div class="row"><label for="s232">Aluminum-frame duty per unit</label><div class="field"><span>$</span><input id="s232" type="number" step="0.5" value="3"></div>
+          <div class="src">Possible Section 232 duty (50%) on the frame's aluminum value. Unverified for this product; ask a customs broker.</div></div>
+        <div class="row"><label for="cbm">Carton volume</label><div class="field"><input id="cbm" type="number" step="0.005" value="0.05"><span>m³</span></div>
+          <div class="src">24 × 32 × 4 in carton.</div></div>
+        <div class="row"><label for="ocean">Ocean freight (shared container)</label><div class="field"><span>$</span><input id="ocean" type="number" step="5" value="110"><span>/m³</span></div>
+          <div class="src">2026 quotes range $40–165 per m³; $110 was a June 2026 spot rate.</div></div>
+        <div class="row"><label for="fixed">Customs broker, bond, port fees</label><div class="field"><span>$</span><input id="fixed" type="number" step="50" value="750"></div>
+          <div class="src">Estimate per shipment.</div></div>
+        <div class="row"><label for="deliv">Truck from port to Amazon</label><div class="field"><span>$</span><input id="deliv" type="number" step="50" value="450"></div>
+          <div class="src">Estimate per shipment.</div></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Amazon</legend>
+        <div class="row"><label for="ref">Referral fee</label><div class="field"><input id="ref" type="number" step="0.5" value="15"><span>%</span></div>
+          <div class="src">Standard for home décor.</div></div>
+        <div class="row"><label for="fba">FBA fulfillment fee</label><div class="field"><span>$</span><input id="fba" type="number" step="0.25" value="16.07"></div>
+          <div class="src">Small Bulky tier at 22 lb: $7.55 + $0.38/lb over 1 lb, plus 3.5% surcharge (third-party figures).</div></div>
+        <div class="row"><label for="stor">Storage and inbound fees per unit</label><div class="field"><span>$</span><input id="stor" type="number" step="0.5" value="3"></div>
+          <div class="src">Estimate: about 1.8 ft³ per unit held 1–2 months.</div></div>
+        <div class="row"><label for="ads">Ad spend</label><div class="field"><input id="ads" type="number" step="1" value="12"><span>%</span></div>
+          <div class="src">Estimate. New listings often spend more during launch.</div></div>
+        <div class="row"><label for="ret">Returns</label><div class="field"><input id="ret" type="number" step="0.5" value="6"><span>%</span></div>
+          <div class="src">Estimate. Each return is treated as a lost unit, since returned glass rarely resells as new.</div></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>eBay (shipped by Amazon)</legend>
+        <div class="row"><label for="eshare">Share of sales on eBay</label><div class="field"><input id="eshare" type="number" step="5" value="15"><span>%</span></div></div>
+        <div class="row"><label for="efee">eBay final value fee</label><div class="field"><input id="efee" type="number" step="0.1" value="12.7"><span>%</span></div>
+          <div class="src">eBay Home &amp; Garden rate, plus $0.40 per order.</div></div>
+        <div class="row"><label for="mcf">Amazon shipping for eBay orders</label><div class="field"><span>$</span><input id="mcf" type="number" step="0.5" value="18"></div>
+          <div class="src">Estimate for Multi-Channel Fulfillment on a bulky item.</div></div>
+        <div class="row"><label for="eads">eBay promoted listing</label><div class="field"><input id="eads" type="number" step="1" value="5"><span>%</span></div></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>One-time startup costs</legend>
+        <div class="row"><label for="k_samples">Samples (2 factories × 2 options)</label><div class="field"><span>$</span><input id="k_samples" type="number" step="50" value="800"></div></div>
+        <div class="row"><label for="k_test">Lab testing (FCC, safety report)</label><div class="field"><span>$</span><input id="k_test" type="number" step="100" value="1500"></div>
+          <div class="src">Lower if the factory already has reports for its controller and adapter.</div></div>
+        <div class="row"><label for="k_tm">Trademark (IP Accelerator)</label><div class="field"><span>$</span><input id="k_tm" type="number" step="50" value="900"></div></div>
+        <div class="row"><label for="k_ins">Liability insurance, year 1</label><div class="field"><span>$</span><input id="k_ins" type="number" step="50" value="900"></div></div>
+        <div class="row"><label for="k_photo">Photos and video (freelancer)</label><div class="field"><span>$</span><input id="k_photo" type="number" step="50" value="800"></div></div>
+        <div class="row"><label for="k_other">Barcodes, Vine reviews, seller plan</label><div class="field"><span>$</span><input id="k_other" type="number" step="10" value="570"></div>
+          <div class="src">GS1 barcodes ~$250, Vine ~$200, 3 months of seller plan ~$120.</div></div>
+        <div class="row"><label for="k_launch">Extra launch ads</label><div class="field"><span>$</span><input id="k_launch" type="number" step="100" value="1000"></div></div>
+      </fieldset>
+      <div><button type="button" id="reset">Reset to defaults</button></div>
+    </form>
+
+    <div class="results">
+      <div class="card verdict" id="verdict">
+        <div class="label">Verdict</div>
+        <h2 id="vhead">…</h2>
+        <p id="vtext"></p>
+      </div>
+
+      <div class="card">
+        <div class="label">Per unit</div>
+        <div class="kpis">
+          <div class="kpi"><span class="s">Landed cost</span><span class="v" id="o_landed"></span><span class="s" id="o_landed_s"></span></div>
+          <div class="kpi"><span class="s">Profit, Amazon sale</span><span class="v" id="o_pa"></span><span class="s" id="o_pa_s"></span></div>
+          <div class="kpi"><span class="s">Profit, eBay sale</span><span class="v" id="o_pe"></span><span class="s" id="o_pe_s"></span></div>
+        </div>
+        <div class="label">Where each Amazon sale goes</div>
+        <div class="bar" id="bar" role="img" aria-label="Breakdown of the retail price"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+
+      <div class="card">
+        <div class="label">Cash and payback</div>
+        <div class="kpis">
+          <div class="kpi"><span class="s">Cash out before first sale</span><span class="v" id="o_cash"></span><span id="o_cash_p"></span></div>
+          <div class="kpi"><span class="s">Profit if the whole batch sells</span><span class="v" id="o_batch"></span><span class="s">after startup costs</span></div>
+          <div class="kpi"><span class="s">Monthly profit</span><span class="v" id="o_month"></span><span class="s" id="o_month_s"></span></div>
+        </div>
+        <div class="tbl"><table>
+          <tbody>
+            <tr><td>Inventory, duty and freight</td><td class="mono" id="o_inv"></td></tr>
+            <tr><td>One-time startup costs</td><td class="mono" id="o_start"></td></tr>
+            <tr><td>Units to sell before startup costs are paid back</td><td class="mono" id="o_be"></td></tr>
+            <tr><td>Units per month for $500 profit</td><td class="mono" id="o_500"></td></tr>
+            <tr><td>Units per month for $2,000 profit</td><td class="mono" id="o_2000"></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="card">
+    <h2>Profit per Amazon sale: factory price × retail price</h2>
+    <p>All other inputs as set above. The outlined cell is your current pair. Green is $25 or more, amber is $0–25, red loses money.</p>
+    <div class="tbl"><table class="grid" id="grid"></table></div>
+  </section>
+
+  <section class="card sources">
+    <h2>Sources and how much to trust them</h2>
+    <ol>
+      <li><b>Duty, China framed mirrors (HTS 7009.92):</b> 6.5% base rate and 25% Section 301 confirmed by US Customs ruling <a href="https://rulings.cbp.gov/ruling/n326194" target="_blank" rel="noopener">NY N326194</a>. Primary source.</li>
+      <li><b>12.5% forced-labor duty (since Jul 24 2026):</b> reported by <a href="https://www.nnrglobal.com/insight/section-301-action-on-forced-labor-starts-july-24/" target="_blank" rel="noopener">NNR Global Logistics</a> and <a href="https://airliftusa.com/tariff-updates/china" target="_blank" rel="noopener">Airlift USA</a>, citing 91 FR 47318. Freight companies, which benefit when importers worry about tariffs; check the Federal Register notice before ordering.</li>
+      <li><b>Vietnam rate:</b> <a href="https://airliftusa.com/tariff-updates/vietnam" target="_blank" rel="noopener">Airlift USA</a>, same bias as above.</li>
+      <li><b>Amazon Small Bulky tier and fees:</b> tier limits from <a href="https://buywithprime.amazon.com/knowledge-center/pricing" target="_blank" rel="noopener">Amazon</a> (primary); fee rates from <a href="https://www.goatconsulting.com/amazon-fulfillment/amazon-fba-fee-changes-for-2026" target="_blank" rel="noopener">GOAT Consulting</a>, an agency that sells Amazon services. Confirm in Seller Central's revenue calculator.</li>
+      <li><b>Ocean freight:</b> <a href="https://www.exfreight.com/what-are-ocean-freight-rates/" target="_blank" rel="noopener">ExFreight</a>, <a href="https://ship4wd.com/logistics-shipping/shipping-from-china-to-usa" target="_blank" rel="noopener">Ship4wd</a>, <a href="https://www.topwayshipping.com/air-vs-sea-to-the-us-in-2026-real-cost-per-cbm-numbers-not-sales-pitches/" target="_blank" rel="noopener">Topway</a>. All are forwarders quoting their own market; ranges disagree by 3×.</li>
+    </ol>
+    <p>Not verified: whether the lit mirror is classified as a mirror (7009) or a lamp (9405), and whether Section 232 applies to the aluminum frame. A licensed customs broker can answer both for about $100–200.</p>
+  </section>
+</div>
+
+<script>
+(function () {
+  const ids = ['price','fob','units','monthly','origin','duty','s232','cbm','ocean','fixed','deliv','ref','fba','stor','ads','ret','eshare','efee','mcf','eads','k_samples','k_test','k_tm','k_ins','k_photo','k_other','k_launch'];
+  const el = id => document.getElementById(id);
+  const defaults = {}; ids.forEach(id => defaults[id] = el(id).value);
+  const KEY = 'mirror-cost-model-v1';
+  try { const saved = JSON.parse(localStorage.getItem(KEY) || 'null'); if (saved) ids.forEach(id => { if (saved[id] != null) el(id).value = saved[id]; }); } catch (e) {}
+
+  const usd = (n, d = 0) => (n < 0 ? '−$' : '$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const num = id => { const v = parseFloat(el(id).value); return isFinite(v) ? v : 0; };
+
+  function model(over) {
+    const g = id => (over && over[id] != null) ? over[id] : num(id);
+    const units = Math.max(1, g('units'));
+    const price = g('price'), fob = g('fob');
+    const freightTotal = units * g('cbm') * g('ocean') + g('fixed') + g('deliv');
+    const freightPU = freightTotal / units;
+    const dutyPU = fob * g('duty') / 100 + g('s232');
+    const landed = fob + dutyPU + freightPU;
+    const retPU = landed * g('ret') / 100;
+    const aRef = price * g('ref') / 100, aAds = price * g('ads') / 100;
+    const pa = price - landed - aRef - g('fba') - g('stor') - aAds - retPU;
+    const eFee = price * g('efee') / 100 + 0.40, eAds = price * g('eads') / 100;
+    const pe = price - landed - eFee - g('mcf') - g('stor') - eAds - retPU;
+    const share = g('eshare') / 100;
+    const blended = (1 - share) * pa + share * pe;
+    const startup = ['k_samples','k_test','k_tm','k_ins','k_photo','k_other','k_launch'].reduce((s, k) => s + g(k), 0);
+    const inv = units * (fob + dutyPU) + freightTotal;
+    return { units, price, fob, freightPU, dutyPU, landed, retPU, aRef, aAds, pa, pe, blended, startup, inv, cash: inv + startup,
+             fba: g('fba'), stor: g('stor'), monthly: g('monthly') };
+  }
+
+  function render() {
+    if (el('origin').value !== 'custom') { el('duty').value = el('origin').value; el('duty').readOnly = true; }
+    else el('duty').readOnly = false;
+    const m = model();
+    const sign = (node, v, d) => { node.textContent = usd(v, d); node.className = 'v ' + (v < 0 ? 'neg' : 'pos'); };
+
+    el('o_landed').textContent = usd(m.landed, 2);
+    el('o_landed_s').textContent = `factory ${usd(m.fob)} + duty ${usd(m.dutyPU, 2)} + freight ${usd(m.freightPU, 2)}`;
+    sign(el('o_pa'), m.pa, 2); el('o_pa_s').textContent = `${(m.pa / m.price * 100).toFixed(1)}% of price`;
+    sign(el('o_pe'), m.pe, 2); el('o_pe_s').textContent = `${(m.pe / m.price * 100).toFixed(1)}% of price`;
+
+    // price breakdown bar
+    const parts = [
+      ['Factory', m.fob, '--c1'], ['Duty', m.dutyPU, '--c2'], ['Freight', m.freightPU, '--c3'],
+      ['Referral fee', m.aRef, '--c4'], ['FBA + storage', m.fba + m.stor, '--c5'],
+      ['Ads', m.aAds, '--c6'], ['Returns', m.retPU, '--c7'], ['Profit', Math.max(0, m.pa), '--c8']];
+    const total = parts.reduce((s, p) => s + p[1], 0) || 1;
+    el('bar').innerHTML = parts.map(p => `<div title="${p[0]} ${usd(p[1], 2)}" style="width:${p[1] / total * 100}%;background:var(${p[2]})"></div>`).join('');
+    el('legend').innerHTML = parts.map(p => `<div><span><i style="background:var(${p[2]})"></i>${p[0]}</span><span class="mono">${usd(p[1], 2)}</span></div>`).join('')
+      + (m.pa < 0 ? `<div><span><i style="background:var(--bad)"></i>Loss</span><span class="mono neg">${usd(m.pa, 2)}</span></div>` : '');
+
+    // cash
+    el('o_cash').textContent = usd(m.cash);
+    const cp = el('o_cash_p');
+    if (m.cash <= 10000) { cp.className = 'pill good'; cp.textContent = 'fits budget'; }
+    else if (m.cash <= 15000) { cp.className = 'pill warn'; cp.textContent = 'top of budget'; }
+    else { cp.className = 'pill bad'; cp.textContent = `${usd(m.cash - 15000)} over $15k`; }
+    const batch = m.units * m.blended - m.startup;
+    sign(el('o_batch'), batch, 0);
+    const monthNet = m.monthly * m.blended - 40;
+    sign(el('o_month'), monthNet, 0); el('o_month_s').textContent = `at ${m.monthly} units/month, after $40 seller plan`;
+    el('o_inv').textContent = usd(m.inv); el('o_start').textContent = usd(m.startup);
+    const per = u => m.blended > 0 ? Math.ceil(u / m.blended).toLocaleString('en-US') : 'never (losing money per unit)';
+    el('o_be').textContent = per(m.startup);
+    el('o_500').textContent = per(540); el('o_2000').textContent = per(2040);
+
+    // verdict
+    const v = el('verdict');
+    let cls, head, text;
+    if (m.blended < 0) { cls = 'bad'; head = 'Every sale loses money';
+      text = `Each sale loses about ${usd(-m.blended, 2)}. Raise the price, lower the factory price, or switch to a lower-duty country before ordering.`; }
+    else if (m.blended < 20 || m.cash > 15000) { cls = 'warn'; head = m.blended < 20 ? 'Thin margin' : 'Profitable, but over budget';
+      text = m.blended < 20 ? `About ${usd(m.blended, 2)} per sale. One price war or a jump in ad costs wipes it out. Aim for $25 or more.`
+        : `About ${usd(m.blended, 2)} per sale, but the first order needs ${usd(m.cash)} in cash. Cut units or startup costs.`; }
+    else { cls = 'good'; head = 'Workable';
+      text = `About ${usd(m.blended, 2)} per sale and ${usd(m.cash)} cash needed. Replace the estimates with real quotes to confirm.`; }
+    v.className = 'card verdict ' + cls; el('vhead').textContent = head; el('vtext').textContent = text;
+
+    // grid
+    const fobs = [40, 50, 60, 70, 80], prices = [149, 169, 189, 209, 229];
+    let h = '<thead><tr><th>Factory price</th>' + prices.map(p => `<th>Retail ${usd(p)}</th>`).join('') + '</tr></thead><tbody>';
+    fobs.forEach(f => {
+      h += `<tr><td class="mono">${usd(f)}</td>` + prices.map(p => {
+        const r = model({ fob: f, price: p }).pa;
+        const c = r >= 25 ? 'good' : r >= 0 ? 'warn' : 'bad';
+        const cur = (f === m.fob && p === m.price) ? ' cur' : '';
+        return `<td class="cell ${c}${cur}">${usd(r)}</td>`; }).join('') + '</tr>';
+    });
+    el('grid').innerHTML = h + '</tbody>';
+
+    try { const o = {}; ids.forEach(id => o[id] = el(id).value); localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) {}
+  }
+
+  el('f').addEventListener('input', render);
+  el('f').addEventListener('submit', e => e.preventDefault());
+  el('reset').addEventListener('click', () => { ids.forEach(id => el(id).value = defaults[id]); render(); });
+  render();
+})();
+</script>
